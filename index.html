@@ -1,143 +1,265 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sopa de Letras – Política Ambiental</title>
 
 <style>
-body{font-family:Arial;background:#f4f6fb;text-align:center;}
-h1{color:#1b2a4a;}
+  body{font-family:Arial, sans-serif; background:#f4f6fb; margin:0; padding:18px; text-align:center;}
+  h1{color:#1b2a4a; margin:0 0 8px;}
+  p{margin:6px 0 10px;}
 
-.grid{
-  display:grid;
-  grid-template-columns:repeat(15,35px);
-  gap:5px;
-  justify-content:center;
-  margin:20px auto;
-}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(15, 34px);
+    gap:6px;
+    justify-content:center;
+    margin:18px auto 10px;
+    padding:10px;
+  }
 
-.cell{
-  width:35px;height:35px;
-  border:1px solid #ccc;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:bold;cursor:pointer;background:white;
-}
+  .cell{
+    width:34px; height:34px;
+    border:1px solid #cfd6e6;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; cursor:pointer;
+    background:white; border-radius:6px;
+    user-select:none;
+  }
+  .cell.selected{background:#ffe08a;}
+  .cell.found{background:#2ecc71; color:white;}
 
-.cell.selected{background:#ffd66a;}
-.cell.found{background:#3ddc97;color:white;}
+  .toolbar{display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;}
+  button{padding:8px 14px; border:1px solid #cfd6e6; background:white; border-radius:10px; cursor:pointer;}
+  button:hover{background:#eef2ff;}
+  .count{font-weight:800;}
 
-table{
-  margin:20px auto;
-  border-collapse:collapse;
-  width:80%;
-}
+  .qaWrap{
+    max-width:980px;
+    margin:18px auto;
+    background:white;
+    border:1px solid #dbe3f6;
+    border-radius:14px;
+    padding:14px;
+    text-align:left;
+  }
 
-td{
-  border:1px solid #ccc;
-  padding:8px;
-  text-align:left;
-}
-
-.answer{
-  color:green;
-  font-weight:bold;
-}
-
-button{padding:8px 15px;margin:10px;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed; /* fuerza 2 columnas */
+  }
+  th, td{
+    border:1px solid #e6ebf7;
+    padding:10px;
+    vertical-align:top;
+    font-size:14px;
+  }
+  th{
+    background:#f0f4ff;
+    color:#1b2a4a;
+    text-align:left;
+  }
+  td.question{width:70%;}
+  td.answer{width:30%; text-align:center; font-weight:800;}
+  .blank{color:#999;}
+  .ok{color:#1c7c39;}
 </style>
 </head>
 
 <body>
+  <h1>Sopa de Letras – Política Ambiental</h1>
+  <p>Selecciona letras con <b>clic + arrastrar</b> en línea recta (horizontal/vertical/diagonal).</p>
 
-<h1>Sopa de Letras – Política Ambiental</h1>
-<p>Selecciona letras con clic + arrastrar.</p>
+  <div class="toolbar">
+    <button onclick="location.reload()">Reiniciar</button>
+    <div class="count">Encontradas: <span id="count">0</span> / <span id="total">0</span></div>
+  </div>
 
-<button onclick="location.reload()">Reiniciar</button>
-<p><strong>Encontradas: <span id="count">0</span> / 10</strong></p>
+  <div class="grid" id="grid"></div>
 
-<div class="grid" id="grid"></div>
-
-<h2>Preguntas y Respuestas</h2>
-<table id="qaTable"></table>
+  <div class="qaWrap">
+    <h2 style="margin:0 0 10px;">Preguntas y respuestas</h2>
+    <table id="qaTable">
+      <thead>
+        <tr>
+          <th>Pregunta</th>
+          <th>Respuesta</th>
+        </tr>
+      </thead>
+      <tbody id="qaBody"></tbody>
+    </table>
+  </div>
 
 <script>
+  // ====== PREGUNTA -> RESPUESTA (la respuesta es la PALABRA a encontrar) ======
+  const QA = [
+    { q:"1. Conjunto de decisiones del Estado para resolver problemas ambientales.", a:"POLITICA" },
+    { q:"2. Relacionado con el entorno natural.", a:"AMBIENTAL" },
+    { q:"3. Vía donde se crean leyes ambientales.", a:"LEGISLATIVA" },
+    { q:"4. Proceso de establecer programas y metas ambientales.", a:"PLANEACION" },
+    { q:"5. Obligación de responder por daños ambientales.", a:"RESPONSABILIDAD" },
+    { q:"6. Tipo de responsabilidad basada en leyes.", a:"JURIDICA" },
+    { q:"7. Actuar correctamente aunque no sea obligatorio por ley.", a:"ETICA" },
+    { q:"8. Compromiso de la sociedad con el medio ambiente.", a:"SOCIAL" },
+    { q:"9. Instrumento económico que desincentiva contaminar.", a:"IMPUESTO" },
+    { q:"10. Castigo por incumplir normas ambientales.", a:"SANCION" }
+  ];
 
-const data = {
-POLITICA:"Conjunto de decisiones del Estado.",
-AMBIENTAL:"Relacionado con el entorno natural.",
-LEGISLATIVA:"Vía donde se crean leyes.",
-PLANEACION:"Proceso de establecer metas.",
-RESPONSABILIDAD:"Obligación de responder por daños.",
-JURIDICA:"Responsabilidad basada en leyes.",
-ETICA:"Actuar correctamente moralmente.",
-SOCIAL:"Compromiso de la sociedad.",
-IMPUESTO:"Instrumento económico ambiental.",
-SANCION:"Castigo por incumplimiento."
-};
+  // ====== CONFIG SOPA ======
+  const size = 15;
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const gridEl = document.getElementById("grid");
+  const qaBody = document.getElementById("qaBody");
+  const countEl = document.getElementById("count");
+  const totalEl = document.getElementById("total");
 
-const size=15;
-const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const grid=document.getElementById("grid");
-const table=document.getElementById("qaTable");
-let selected="";
-let foundCount=0;
+  totalEl.textContent = QA.length;
 
-// Crear tabla preguntas
-for(let key in data){
-  let row=document.createElement("tr");
+  // Render tabla con 2 columnas (Pregunta | Respuesta)
+  const found = new Set();
+  QA.forEach((item, idx) => {
+    const tr = document.createElement("tr");
 
-  let q=document.createElement("td");
-  q.textContent=data[key];
+    const tdQ = document.createElement("td");
+    tdQ.className = "question";
+    tdQ.textContent = item.q;
 
-  let a=document.createElement("td");
-  a.id="a-"+key;
-  a.textContent="__________";
+    const tdA = document.createElement("td");
+    tdA.className = "answer blank";
+    tdA.id = "ans-" + item.a;
+    tdA.textContent = "__________";
 
-  row.appendChild(q);
-  row.appendChild(a);
-  table.appendChild(row);
-}
+    tr.appendChild(tdQ);
+    tr.appendChild(tdA);
+    qaBody.appendChild(tr);
+  });
 
-// Crear cuadrícula
-for(let i=0;i<size*size;i++){
-  let cell=document.createElement("div");
-  cell.className="cell";
-  cell.textContent=letters[Math.floor(Math.random()*letters.length)];
-
-  cell.onmousedown=function(){
-    selected="";
-    document.querySelectorAll(".selected").forEach(c=>c.classList.remove("selected"));
-  };
-
-  cell.onmouseover=function(e){
-    if(e.buttons==1){
-      selected+=cell.textContent;
-      cell.classList.add("selected");
-      checkWord();
-    }
-  };
-
-  grid.appendChild(cell);
-}
-
-function checkWord(){
-  for(let key in data){
-    if(selected.includes(key)){
-      document.getElementById("a-"+key).textContent=key;
-      document.getElementById("a-"+key).classList.add("answer");
-
-      document.querySelectorAll(".selected").forEach(c=>{
-        c.classList.remove("selected");
-        c.classList.add("found");
-      });
-
-      selected="";
-      foundCount++;
-      document.getElementById("count").textContent=foundCount;
+  // Construir matriz aleatoria (simple)
+  const cells = [];
+  for(let r=0; r<size; r++){
+    for(let c=0; c<size; c++){
+      const div = document.createElement("div");
+      div.className = "cell";
+      div.dataset.r = r;
+      div.dataset.c = c;
+      div.textContent = letters[Math.floor(Math.random()*letters.length)];
+      gridEl.appendChild(div);
+      cells.push(div);
     }
   }
-}
 
+  // Selección por arrastre (8 direcciones)
+  let isDragging = false;
+  let startCell = null;
+  let selectedPath = [];
+
+  function getCell(r,c){
+    return gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  }
+
+  function clearSelection(){
+    selectedPath.forEach(el => el.classList.remove("selected"));
+    selectedPath = [];
+  }
+
+  function linePath(a,b){
+    const ar = +a.dataset.r, ac = +a.dataset.c;
+    const br = +b.dataset.r, bc = +b.dataset.c;
+    const dr = br - ar, dc = bc - ac;
+
+    const ok = (dr===0) || (dc===0) || (Math.abs(dr)===Math.abs(dc));
+    if(!ok) return [];
+
+    const stepR = dr===0 ? 0 : dr/Math.abs(dr);
+    const stepC = dc===0 ? 0 : dc/Math.abs(dc);
+    const len = Math.max(Math.abs(dr), Math.abs(dc)) + 1;
+
+    const path = [];
+    let r = ar, c = ac;
+    for(let i=0;i<len;i++){
+      const cell = getCell(r,c);
+      if(cell) path.push(cell);
+      r += stepR; c += stepC;
+    }
+    return path;
+  }
+
+  function selectionString(path){
+    return path.map(el => el.textContent).join("");
+  }
+
+  function tryMatch(){
+    if(selectedPath.length < 2) return;
+
+    const s1 = selectionString(selectedPath);
+    const s2 = s1.split("").reverse().join("");
+
+    // ¿coincide con alguna respuesta?
+    for(const item of QA){
+      const w = item.a;
+      if(!found.has(w) && (s1.includes(w) || s2.includes(w))){
+        found.add(w);
+
+        // marcar celdas como encontradas
+        selectedPath.forEach(el => {
+          el.classList.remove("selected");
+          el.classList.add("found");
+        });
+
+        // mostrar respuesta enfrente
+        const ans = document.getElementById("ans-" + w);
+        if(ans){
+          ans.textContent = w;
+          ans.classList.remove("blank");
+          ans.classList.add("ok");
+        }
+
+        countEl.textContent = found.size;
+        break;
+      }
+    }
+  }
+
+  // Eventos
+  cells.forEach(cell => {
+    cell.addEventListener("mousedown", (e)=>{
+      e.preventDefault();
+      isDragging = true;
+      startCell = cell;
+      clearSelection();
+      selectedPath = [cell];
+      cell.classList.add("selected");
+    });
+
+    cell.addEventListener("mouseenter", ()=>{
+      if(!isDragging || !startCell) return;
+      clearSelection();
+      const path = linePath(startCell, cell);
+      selectedPath = path;
+      selectedPath.forEach(el => {
+        if(!el.classList.contains("found")) el.classList.add("selected");
+      });
+    });
+
+    cell.addEventListener("mouseup", ()=>{
+      if(!isDragging) return;
+      isDragging = false;
+      tryMatch();
+      clearSelection();
+      startCell = null;
+    });
+  });
+
+  document.addEventListener("mouseup", ()=>{
+    if(isDragging){
+      isDragging = false;
+      tryMatch();
+      clearSelection();
+      startCell = null;
+    }
+  });
 </script>
 
 </body>
