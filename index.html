@@ -5,94 +5,100 @@
 <title>Sopa de Letras – Política Ambiental</title>
 
 <style>
-body { font-family: Arial; background:#f4f6fb; text-align:center; }
-h1 { color:#1b2a4a; }
+body{font-family:Arial;background:#f4f6fb;text-align:center;}
+h1{color:#1b2a4a;}
 
 .grid{
   display:grid;
-  grid-template-columns: repeat(15, 35px);
+  grid-template-columns:repeat(15,35px);
   gap:5px;
   justify-content:center;
   margin:20px auto;
 }
 
 .cell{
-  width:35px;
-  height:35px;
+  width:35px;height:35px;
   border:1px solid #ccc;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-  cursor:pointer;
-  background:white;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold;cursor:pointer;background:white;
 }
 
-.cell.selected{ background:#ffd66a; }
-.cell.found{ background:#3ddc97; color:white; }
+.cell.selected{background:#ffd66a;}
+.cell.found{background:#3ddc97;color:white;}
 
-.question{
-  max-width:700px;
-  margin:10px auto;
-  text-align:left;
+table{
+  margin:20px auto;
+  border-collapse:collapse;
+  width:80%;
+}
+
+td{
+  border:1px solid #ccc;
   padding:8px;
-  border-bottom:1px solid #ddd;
+  text-align:left;
 }
 
-.answered{
+.answer{
   color:green;
   font-weight:bold;
 }
 
-button{ padding:8px 15px; margin:10px; }
+button{padding:8px 15px;margin:10px;}
 </style>
 </head>
 
 <body>
 
 <h1>Sopa de Letras – Política Ambiental</h1>
-<p>Selecciona letras con clic + arrastrar (horizontal o vertical).</p>
+<p>Selecciona letras con clic + arrastrar.</p>
 
 <button onclick="location.reload()">Reiniciar</button>
 <p><strong>Encontradas: <span id="count">0</span> / 10</strong></p>
 
 <div class="grid" id="grid"></div>
 
-<h2>Preguntas</h2>
-<div id="questions"></div>
+<h2>Preguntas y Respuestas</h2>
+<table id="qaTable"></table>
 
 <script>
 
-const words = {
-POLITICA:"1. Conjunto de decisiones del Estado para resolver problemas ambientales.",
-AMBIENTAL:"2. Relacionado con el entorno natural.",
-LEGISLATIVA:"3. Vía donde se crean leyes ambientales.",
-PLANEACION:"4. Proceso de establecer programas y metas ambientales.",
-RESPONSABILIDAD:"5. Obligación de responder por daños ambientales.",
-JURIDICA:"6. Tipo de responsabilidad basada en leyes.",
-ETICA:"7. Actuar correctamente aunque no sea obligatorio por ley.",
-SOCIAL:"8. Compromiso de la sociedad con el medio ambiente.",
-IMPUESTO:"9. Instrumento económico que desincentiva contaminar.",
-SANCION:"10. Castigo por incumplir normas ambientales."
+const data = {
+POLITICA:"Conjunto de decisiones del Estado.",
+AMBIENTAL:"Relacionado con el entorno natural.",
+LEGISLATIVA:"Vía donde se crean leyes.",
+PLANEACION:"Proceso de establecer metas.",
+RESPONSABILIDAD:"Obligación de responder por daños.",
+JURIDICA:"Responsabilidad basada en leyes.",
+ETICA:"Actuar correctamente moralmente.",
+SOCIAL:"Compromiso de la sociedad.",
+IMPUESTO:"Instrumento económico ambiental.",
+SANCION:"Castigo por incumplimiento."
 };
 
 const size=15;
 const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const grid=document.getElementById("grid");
-const questionsDiv=document.getElementById("questions");
+const table=document.getElementById("qaTable");
 let selected="";
 let foundCount=0;
 
-// Mostrar preguntas
-for(let key in words){
-  let div=document.createElement("div");
-  div.className="question";
-  div.id="q-"+key;
-  div.textContent=words[key];
-  questionsDiv.appendChild(div);
+// Crear tabla preguntas
+for(let key in data){
+  let row=document.createElement("tr");
+
+  let q=document.createElement("td");
+  q.textContent=data[key];
+
+  let a=document.createElement("td");
+  a.id="a-"+key;
+  a.textContent="__________";
+
+  row.appendChild(q);
+  row.appendChild(a);
+  table.appendChild(row);
 }
 
-// Crear cuadrícula aleatoria
+// Crear cuadrícula
 for(let i=0;i<size*size;i++){
   let cell=document.createElement("div");
   cell.className="cell";
@@ -115,14 +121,16 @@ for(let i=0;i<size*size;i++){
 }
 
 function checkWord(){
-  for(let key in words){
+  for(let key in data){
     if(selected.includes(key)){
-      document.getElementById("q-"+key).classList.add("answered");
-      document.getElementById("q-"+key).innerHTML += " ✅";
+      document.getElementById("a-"+key).textContent=key;
+      document.getElementById("a-"+key).classList.add("answer");
+
       document.querySelectorAll(".selected").forEach(c=>{
         c.classList.remove("selected");
         c.classList.add("found");
       });
+
       selected="";
       foundCount++;
       document.getElementById("count").textContent=foundCount;
