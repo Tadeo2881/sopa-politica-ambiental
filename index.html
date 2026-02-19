@@ -22,14 +22,23 @@
     justify-content:center;
     margin:18px auto 10px;
     padding:10px;
+    /* 👇 clave para móvil */
+    touch-action:none;         /* evita scroll/zoom mientras arrastras */
+    -webkit-user-select:none;
+    user-select:none;
   }
+
   .cell{
     width:34px; height:34px;
     border:1px solid #cfd6e6;
     display:flex; align-items:center; justify-content:center;
-    font-weight:800; cursor:pointer;
+    font-weight:800;
     background:white; border-radius:6px;
+    /* 👇 clave para móvil */
+    touch-action:none;
+    -webkit-user-select:none;
     user-select:none;
+    cursor:pointer;
   }
   .cell.selected{background:#ffe08a;}
   .cell.found{background:#2ecc71; color:white;}
@@ -70,7 +79,7 @@
 
 <body>
   <h1>Sopa de Letras – Política Ambiental</h1>
-  <p>Selecciona letras con <b>clic + arrastrar</b> en línea recta (horizontal/vertical/diagonal). Se acepta al derecho o al revés.</p>
+  <p>En celular: mantén presionado y arrastra en línea recta. Se acepta al derecho o al revés.</p>
 
   <div class="toolbar">
     <button id="resetBtn">Reiniciar</button>
@@ -92,11 +101,11 @@
     </table>
   </div>
 
-  <div class="note">Tip: si no “detecta”, intenta seleccionar la palabra completa en una sola línea recta.</div>
+  <div class="note">Tip: selecciona la palabra completa en una sola línea recta (sin doblar).</div>
 
 <script>
 /* =========================
-   1) Datos (pregunta fija + palabra)
+   1) Datos
 ========================= */
 const QA = [
   { q:"1. Conjunto de decisiones del Estado.", a:"POLITICA" },
@@ -110,11 +119,10 @@ const QA = [
   { q:"9. Instrumento económico ambiental.", a:"IMPUESTO" },
   { q:"10. Castigo por incumplimiento.", a:"SANCION" }
 ];
-
-const WORDS = QA.map(x => x.a); // palabras a insertar
+const WORDS = QA.map(x => x.a);
 
 /* =========================
-   2) Configuración
+   2) Config
 ========================= */
 const size = 15;
 const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -135,10 +143,9 @@ function shuffle(arr){
 }
 
 /* =========================
-   3) Tabla: respuestas visibles, pero desordenadas y cambian cada inicio
+   3) Tabla: respuestas desordenadas cada inicio
 ========================= */
 const answersShuffled = shuffle(WORDS);
-
 QA.forEach((item) => {
   const tr = document.createElement("tr");
 
@@ -171,23 +178,16 @@ QA.forEach((item) => {
 });
 
 /* =========================
-   4) Generador REAL de sopa (inserta palabras y rellena el resto)
+   4) Generador REAL (inserta palabras)
 ========================= */
 const DIRS = [
-  {dr:0, dc:1},   // →
-  {dr:0, dc:-1},  // ←
-  {dr:1, dc:0},   // ↓
-  {dr:-1, dc:0},  // ↑
-  {dr:1, dc:1},   // ↘
-  {dr:-1, dc:-1}, // ↖
-  {dr:1, dc:-1},  // ↙
-  {dr:-1, dc:1}   // ↗
+  {dr:0, dc:1},{dr:0, dc:-1},{dr:1, dc:0},{dr:-1, dc:0},
+  {dr:1, dc:1},{dr:-1, dc:-1},{dr:1, dc:-1},{dr:-1, dc:1}
 ];
 
 function emptyBoard(){
   return Array.from({length:size}, ()=> Array.from({length:size}, ()=> ""));
 }
-
 function canPlace(board, word, r, c, dir){
   for(let i=0;i<word.length;i++){
     const rr = r + dir.dr*i;
@@ -198,7 +198,6 @@ function canPlace(board, word, r, c, dir){
   }
   return true;
 }
-
 function placeWord(board, word, r, c, dir){
   const coords = [];
   for(let i=0;i<word.length;i++){
@@ -209,79 +208,65 @@ function placeWord(board, word, r, c, dir){
   }
   return coords;
 }
-
 function buildBoard(words){
   const board = emptyBoard();
-  const placements = {}; // palabra -> coords
   const wordsRand = shuffle(words);
 
   for(const w0 of wordsRand){
-    // al azar, a veces al revés
     const w = (Math.random()<0.5) ? w0 : w0.split("").reverse().join("");
-
     let placed = false;
     const dirs = shuffle(DIRS);
-    for(let attempt=0; attempt<400 && !placed; attempt++){
+
+    for(let attempt=0; attempt<500 && !placed; attempt++){
       const dir = dirs[Math.floor(Math.random()*dirs.length)];
       const r = Math.floor(Math.random()*size);
       const c = Math.floor(Math.random()*size);
-
       if(canPlace(board, w, r, c, dir)){
-        const coords = placeWord(board, w, r, c, dir);
-        // Guardamos coords asociadas a la palabra ORIGINAL (w0), no al revés
-        placements[w0] = coords;
+        placeWord(board, w, r, c, dir);
         placed = true;
       }
     }
-    if(!placed){
-      // Si por alguna razón no cupo, reintenta reconstruyendo todo
-      return null;
-    }
+    if(!placed) return null;
   }
 
-  // Rellenar letras vacías
   for(let r=0;r<size;r++){
     for(let c=0;c<size;c++){
       if(board[r][c]===""){
-        board[r][c] = letters[Math.floor(Math.random()*letters.length)];
+        board[r][c]=letters[Math.floor(Math.random()*letters.length)];
       }
     }
   }
-  return {board, placements};
+  return board;
 }
 
-// Construimos con reintentos
-let built = null;
-for(let tries=0; tries<30 && !built; tries++){
-  built = buildBoard(WORDS);
+let BOARD=null;
+for(let t=0;t<30 && !BOARD;t++){
+  BOARD = buildBoard(WORDS);
 }
-if(!built){
+if(!BOARD){
   alert("No se pudo generar la sopa. Recarga la página.");
 }
 
-const BOARD = built.board;
-const PLACEMENTS = built.placements;
-
 /* =========================
-   5) Pintar cuadrícula HTML
+   5) Pintar grid
 ========================= */
 gridEl.innerHTML = "";
-const cellEls = []; // 2D
+const cellEls = [];
 for(let r=0;r<size;r++){
   cellEls[r]=[];
   for(let c=0;c<size;c++){
-    const div = document.createElement("div");
-    div.className = "cell";
-    div.dataset.r = r;
-    div.dataset.c = c;
-    div.textContent = BOARD[r][c];
+    const div=document.createElement("div");
+    div.className="cell";
+    div.dataset.r=r;
+    div.dataset.c=c;
+    div.textContent=BOARD[r][c];
     gridEl.appendChild(div);
     cellEls[r][c]=div;
   }
 }
 
 /* =========================
-   6) Selección por arrastre + validación
+   6) Selección (MÓVIL + PC) usando POINTER EVENTS
 ========================= */
 let isDragging=false, startCell=null, selectedPath=[];
 const found = new Set();
@@ -319,7 +304,6 @@ function selectionString(path){
 
 function tryMatch(){
   if(selectedPath.length<2) return;
-
   const s1 = selectionString(selectedPath);
   const s2 = s1.split("").reverse().join("");
 
@@ -328,18 +312,16 @@ function tryMatch(){
     if(s1 === w || s2 === w){
       found.add(w);
 
-      // pintar en verde las celdas seleccionadas
       selectedPath.forEach(el=>{
         el.classList.remove("selected");
         el.classList.add("found");
       });
 
-      // completar respuesta en la fila correcta y bloquear
-      const sel = document.getElementById("sel-"+w);
+      const sel=document.getElementById("sel-"+w);
       if(sel){
-        sel.value = w;
+        sel.value=w;
         sel.classList.add("locked");
-        sel.disabled = true;
+        sel.disabled=true;
       }
 
       countEl.textContent = found.size;
@@ -348,47 +330,54 @@ function tryMatch(){
   }
 }
 
-// Eventos por celda
-for(let r=0;r<size;r++){
-  for(let c=0;c<size;c++){
-    const cell = cellEls[r][c];
-
-    cell.addEventListener("mousedown",(e)=>{
-      e.preventDefault();
-      isDragging=true;
-      startCell=cell;
-      clearSelection();
-      selectedPath=[cell];
-      if(!cell.classList.contains("found")) cell.classList.add("selected");
-    });
-
-    cell.addEventListener("mouseenter",()=>{
-      if(!isDragging||!startCell) return;
-      clearSelection();
-      const path=linePath(startCell, cell);
-      selectedPath=path;
-      selectedPath.forEach(el=>{
-        if(!el.classList.contains("found")) el.classList.add("selected");
-      });
-    });
-
-    cell.addEventListener("mouseup",()=>{
-      if(!isDragging) return;
-      isDragging=false;
-      tryMatch();
-      clearSelection();
-      startCell=null;
-    });
-  }
+function getCellFromPoint(x,y){
+  const el = document.elementFromPoint(x,y);
+  if(!el) return null;
+  return el.classList && el.classList.contains("cell") ? el : null;
 }
 
-document.addEventListener("mouseup",()=>{
-  if(isDragging){
-    isDragging=false;
-    tryMatch();
-    clearSelection();
-    startCell=null;
-  }
+// Eventos pointer en todo el grid (más fiable en móvil)
+gridEl.addEventListener("pointerdown",(e)=>{
+  const cell = getCellFromPoint(e.clientX, e.clientY);
+  if(!cell) return;
+  e.preventDefault();
+  gridEl.setPointerCapture(e.pointerId);
+
+  isDragging=true;
+  startCell=cell;
+  clearSelection();
+  selectedPath=[cell];
+  if(!cell.classList.contains("found")) cell.classList.add("selected");
+});
+
+gridEl.addEventListener("pointermove",(e)=>{
+  if(!isDragging || !startCell) return;
+  e.preventDefault();
+  const cell = getCellFromPoint(e.clientX, e.clientY);
+  if(!cell) return;
+
+  clearSelection();
+  selectedPath = linePath(startCell, cell);
+  selectedPath.forEach(el=>{
+    if(!el.classList.contains("found")) el.classList.add("selected");
+  });
+});
+
+function endDrag(){
+  if(!isDragging) return;
+  isDragging=false;
+  tryMatch();
+  clearSelection();
+  startCell=null;
+}
+
+gridEl.addEventListener("pointerup",(e)=>{
+  e.preventDefault();
+  endDrag();
+});
+gridEl.addEventListener("pointercancel",(e)=>{
+  e.preventDefault();
+  endDrag();
 });
 
 resetBtn.addEventListener("click", ()=> location.reload());
