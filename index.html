@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Sopa de Letras Digital - Política Ambiental. Encuentra 30 palabras relacionadas con política ambiental en esta sopa de letras interactiva." />
+  <title>Sopa de Letras – Política Ambiental</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <header>
+    <h1>Sopa de Letras Digital – Política Ambiental</h1>
+    <p>Selecciona letras con <strong>clic + arrastrar</strong> (horizontal/vertical/diagonal). Se acepta al derecho o al revés.</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="topbar">
+        <button class="btn" id="resetBtn" aria-label="Reiniciar el juego">Reiniciar</button>
+        <div class="stats" id="stats" aria-live="polite" aria-label="Palabras encontradas">
+          Encontradas: 0 / 30
+        </div>
+      </div>
+
+      <div class="grid" id="grid" role="grid" aria-label="Sopa de letras 20 por 20"></div>
+
+      <div class="note">
+        💡 <strong>Tip:</strong> Si no te reconoce una palabra, intenta seleccionarla completa en línea recta (sin "doblar").
+      </div>
+    </section>
+
+    <aside class="card">
+      <div class="list">
+        <div>
+          <div class="sectionTitle">30 preguntas / pistas (encuentra la palabra)</div>
+          <div class="hint">Cuando encuentres una palabra, se marcará en verde aquí y en la cuadrícula.</div>
+        </div>
+        <div class="words" id="words" role="region" aria-label="Lista de palabras a encontrar"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
