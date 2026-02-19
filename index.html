@@ -49,20 +49,6 @@
   td.question{width:70%;}
   td.answer{width:30%; text-align:center; font-weight:900; letter-spacing:.6px;}
 
-  /* Respuesta en “rayas” */
-  .slot{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:28px;
-    border-bottom:2px solid #333;
-    padding:2px 6px;
-  }
-  .slot span{display:inline-block; padding:2px 6px;}
-  .slot.ok{border-bottom-color:#1c7c39;}
-  .slot.ok span{color:#1c7c39;}
-
-  /* Opcional: al acertar, bloquear el selector */
   select{
     width:100%;
     padding:7px 10px;
@@ -77,12 +63,14 @@
     border-color:#bfe7cd !important;
     color:#1c7c39 !important;
   }
+
+  .note{max-width:980px; margin:0 auto; color:#42526e; font-size:13px;}
 </style>
 </head>
 
 <body>
   <h1>Sopa de Letras – Política Ambiental</h1>
-  <p>Selecciona letras con <b>clic + arrastrar</b> en línea recta (horizontal/vertical/diagonal).</p>
+  <p>Selecciona letras con <b>clic + arrastrar</b> en línea recta (horizontal/vertical/diagonal). Se acepta al derecho o al revés.</p>
 
   <div class="toolbar">
     <button id="resetBtn">Reiniciar</button>
@@ -92,174 +80,279 @@
   <div class="grid" id="grid"></div>
 
   <div class="qaWrap">
-    <h2 style="margin:0 0 10px;">Preguntas y respuestas (desordenadas)</h2>
+    <h2 style="margin:0 0 10px;">Preguntas y respuestas (respuestas desordenadas)</h2>
     <table>
       <thead>
         <tr>
           <th>Pregunta</th>
-          <th>Respuesta (elige una)</th>
+          <th>Respuesta</th>
         </tr>
       </thead>
       <tbody id="qaBody"></tbody>
     </table>
   </div>
 
+  <div class="note">Tip: si no “detecta”, intenta seleccionar la palabra completa en una sola línea recta.</div>
+
 <script>
-  // ====== PREGUNTAS (FIJAS) + RESPUESTA CORRECTA (PALABRA) ======
-  const QA = [
-    { q:"1. Conjunto de decisiones del Estado.", a:"POLITICA" },
-    { q:"2. Relacionado con el entorno natural.", a:"AMBIENTAL" },
-    { q:"3. Vía donde se crean leyes.", a:"LEGISLATIVA" },
-    { q:"4. Proceso de establecer metas.", a:"PLANEACION" },
-    { q:"5. Obligación de responder por daños.", a:"RESPONSABILIDAD" },
-    { q:"6. Responsabilidad basada en leyes.", a:"JURIDICA" },
-    { q:"7. Actuar correctamente moralmente.", a:"ETICA" },
-    { q:"8. Compromiso de la sociedad.", a:"SOCIAL" },
-    { q:"9. Instrumento económico ambiental.", a:"IMPUESTO" },
-    { q:"10. Castigo por incumplimiento.", a:"SANCION" }
-  ];
+/* =========================
+   1) Datos (pregunta fija + palabra)
+========================= */
+const QA = [
+  { q:"1. Conjunto de decisiones del Estado.", a:"POLITICA" },
+  { q:"2. Relacionado con el entorno natural.", a:"AMBIENTAL" },
+  { q:"3. Vía donde se crean leyes.", a:"LEGISLATIVA" },
+  { q:"4. Proceso de establecer metas.", a:"PLANEACION" },
+  { q:"5. Obligación de responder por daños.", a:"RESPONSABILIDAD" },
+  { q:"6. Responsabilidad basada en leyes.", a:"JURIDICA" },
+  { q:"7. Actuar correctamente moralmente.", a:"ETICA" },
+  { q:"8. Compromiso de la sociedad.", a:"SOCIAL" },
+  { q:"9. Instrumento económico ambiental.", a:"IMPUESTO" },
+  { q:"10. Castigo por incumplimiento.", a:"SANCION" }
+];
 
-  // ====== SOPA ======
-  const size = 15;
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const gridEl = document.getElementById("grid");
-  const qaBody = document.getElementById("qaBody");
-  const countEl = document.getElementById("count");
-  const totalEl = document.getElementById("total");
-  const resetBtn = document.getElementById("resetBtn");
+const WORDS = QA.map(x => x.a); // palabras a insertar
 
-  totalEl.textContent = QA.length;
+/* =========================
+   2) Configuración
+========================= */
+const size = 15;
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const gridEl = document.getElementById("grid");
+const qaBody = document.getElementById("qaBody");
+const countEl = document.getElementById("count");
+const totalEl = document.getElementById("total");
+const resetBtn = document.getElementById("resetBtn");
+totalEl.textContent = QA.length;
 
-  // ---- util: shuffle ----
-  function shuffle(arr){
-    const a = arr.slice();
-    for(let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
+  return a;
+}
 
-  // ====== 1) Respuestas visibles pero DESORDENADAS (cambian cada inicio) ======
-  const answersShuffled = shuffle(QA.map(x=>x.a));
+/* =========================
+   3) Tabla: respuestas visibles, pero desordenadas y cambian cada inicio
+========================= */
+const answersShuffled = shuffle(WORDS);
 
-  // Render tabla: pregunta fija + un SELECT con respuestas en orden aleatorio
-  QA.forEach((item, idx) => {
-    const tr = document.createElement("tr");
+QA.forEach((item) => {
+  const tr = document.createElement("tr");
 
-    const tdQ = document.createElement("td");
-    tdQ.className = "question";
-    tdQ.textContent = item.q;
+  const tdQ = document.createElement("td");
+  tdQ.className = "question";
+  tdQ.textContent = item.q;
 
-    const tdA = document.createElement("td");
-    tdA.className = "answer";
+  const tdA = document.createElement("td");
+  tdA.className = "answer";
 
-    const sel = document.createElement("select");
-    sel.id = "sel-" + item.a;
+  const sel = document.createElement("select");
+  sel.id = "sel-" + item.a;
 
-    // opción por defecto (rayas)
-    const opt0 = document.createElement("option");
-    opt0.value = "";
-    opt0.textContent = "__________";
-    sel.appendChild(opt0);
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "__________";
+  sel.appendChild(opt0);
 
-    // opciones desordenadas
-    answersShuffled.forEach(w=>{
-      const opt = document.createElement("option");
-      opt.value = w;
-      opt.textContent = w;
-      sel.appendChild(opt);
-    });
-
-    tdA.appendChild(sel);
-    tr.appendChild(tdQ);
-    tr.appendChild(tdA);
-    qaBody.appendChild(tr);
+  answersShuffled.forEach(w=>{
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = w;
+    sel.appendChild(opt);
   });
 
-  // ====== 2) Cuadrícula (letras random) ======
-  const cells = [];
-  for(let r=0; r<size; r++){
-    for(let c=0; c<size; c++){
-      const div = document.createElement("div");
-      div.className = "cell";
-      div.dataset.r = r;
-      div.dataset.c = c;
-      div.textContent = letters[Math.floor(Math.random()*letters.length)];
-      gridEl.appendChild(div);
-      cells.push(div);
+  tdA.appendChild(sel);
+  tr.appendChild(tdQ);
+  tr.appendChild(tdA);
+  qaBody.appendChild(tr);
+});
+
+/* =========================
+   4) Generador REAL de sopa (inserta palabras y rellena el resto)
+========================= */
+const DIRS = [
+  {dr:0, dc:1},   // →
+  {dr:0, dc:-1},  // ←
+  {dr:1, dc:0},   // ↓
+  {dr:-1, dc:0},  // ↑
+  {dr:1, dc:1},   // ↘
+  {dr:-1, dc:-1}, // ↖
+  {dr:1, dc:-1},  // ↙
+  {dr:-1, dc:1}   // ↗
+];
+
+function emptyBoard(){
+  return Array.from({length:size}, ()=> Array.from({length:size}, ()=> ""));
+}
+
+function canPlace(board, word, r, c, dir){
+  for(let i=0;i<word.length;i++){
+    const rr = r + dir.dr*i;
+    const cc = c + dir.dc*i;
+    if(rr<0 || rr>=size || cc<0 || cc>=size) return false;
+    const existing = board[rr][cc];
+    if(existing !== "" && existing !== word[i]) return false;
+  }
+  return true;
+}
+
+function placeWord(board, word, r, c, dir){
+  const coords = [];
+  for(let i=0;i<word.length;i++){
+    const rr = r + dir.dr*i;
+    const cc = c + dir.dc*i;
+    board[rr][cc] = word[i];
+    coords.push([rr,cc]);
+  }
+  return coords;
+}
+
+function buildBoard(words){
+  const board = emptyBoard();
+  const placements = {}; // palabra -> coords
+  const wordsRand = shuffle(words);
+
+  for(const w0 of wordsRand){
+    // al azar, a veces al revés
+    const w = (Math.random()<0.5) ? w0 : w0.split("").reverse().join("");
+
+    let placed = false;
+    const dirs = shuffle(DIRS);
+    for(let attempt=0; attempt<400 && !placed; attempt++){
+      const dir = dirs[Math.floor(Math.random()*dirs.length)];
+      const r = Math.floor(Math.random()*size);
+      const c = Math.floor(Math.random()*size);
+
+      if(canPlace(board, w, r, c, dir)){
+        const coords = placeWord(board, w, r, c, dir);
+        // Guardamos coords asociadas a la palabra ORIGINAL (w0), no al revés
+        placements[w0] = coords;
+        placed = true;
+      }
+    }
+    if(!placed){
+      // Si por alguna razón no cupo, reintenta reconstruyendo todo
+      return null;
     }
   }
 
-  // ====== 3) Lógica de selección por arrastre ======
-  let isDragging=false, startCell=null, selectedPath=[];
-  const found = new Set();
-
-  function getCell(r,c){
-    return gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-  }
-  function clearSelection(){
-    selectedPath.forEach(el=>el.classList.remove("selected"));
-    selectedPath=[];
-  }
-  function linePath(a,b){
-    const ar=+a.dataset.r, ac=+a.dataset.c;
-    const br=+b.dataset.r, bc=+b.dataset.c;
-    const dr=br-ar, dc=bc-ac;
-
-    const ok=(dr===0)||(dc===0)||(Math.abs(dr)===Math.abs(dc));
-    if(!ok) return [];
-
-    const stepR=dr===0?0:dr/Math.abs(dr);
-    const stepC=dc===0?0:dc/Math.abs(dc);
-    const len=Math.max(Math.abs(dr),Math.abs(dc))+1;
-
-    const path=[];
-    let r=ar, c=ac;
-    for(let i=0;i<len;i++){
-      const cell=getCell(r,c);
-      if(cell) path.push(cell);
-      r+=stepR; c+=stepC;
-    }
-    return path;
-  }
-  function selectionString(path){
-    return path.map(el=>el.textContent).join("");
-  }
-
-  function tryMatch(){
-    if(selectedPath.length<2) return;
-
-    const s1 = selectionString(selectedPath);
-    const s2 = s1.split("").reverse().join("");
-
-    for(const item of QA){
-      const w=item.a;
-      if(found.has(w)) continue;
-      if(s1.includes(w) || s2.includes(w)){
-        found.add(w);
-
-        // marcar verde en sopa
-        selectedPath.forEach(el=>{
-          el.classList.remove("selected");
-          el.classList.add("found");
-        });
-
-        // ✅ marcar respuesta correcta: seleccionar automáticamente su palabra y bloquear
-        const sel = document.getElementById("sel-"+w);
-        if(sel){
-          sel.value = w;           // pone la respuesta en su “raya”
-          sel.classList.add("locked");
-          sel.disabled = true;     // bloquea (opcional)
-        }
-
-        countEl.textContent = found.size;
-        break;
+  // Rellenar letras vacías
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(board[r][c]===""){
+        board[r][c] = letters[Math.floor(Math.random()*letters.length)];
       }
     }
   }
+  return {board, placements};
+}
 
-  cells.forEach(cell=>{
+// Construimos con reintentos
+let built = null;
+for(let tries=0; tries<30 && !built; tries++){
+  built = buildBoard(WORDS);
+}
+if(!built){
+  alert("No se pudo generar la sopa. Recarga la página.");
+}
+
+const BOARD = built.board;
+const PLACEMENTS = built.placements;
+
+/* =========================
+   5) Pintar cuadrícula HTML
+========================= */
+gridEl.innerHTML = "";
+const cellEls = []; // 2D
+for(let r=0;r<size;r++){
+  cellEls[r]=[];
+  for(let c=0;c<size;c++){
+    const div = document.createElement("div");
+    div.className = "cell";
+    div.dataset.r = r;
+    div.dataset.c = c;
+    div.textContent = BOARD[r][c];
+    gridEl.appendChild(div);
+    cellEls[r][c]=div;
+  }
+}
+
+/* =========================
+   6) Selección por arrastre + validación
+========================= */
+let isDragging=false, startCell=null, selectedPath=[];
+const found = new Set();
+
+function clearSelection(){
+  selectedPath.forEach(el=>el.classList.remove("selected"));
+  selectedPath=[];
+}
+
+function linePath(a,b){
+  const ar=+a.dataset.r, ac=+a.dataset.c;
+  const br=+b.dataset.r, bc=+b.dataset.c;
+  const dr=br-ar, dc=bc-ac;
+
+  const ok=(dr===0)||(dc===0)||(Math.abs(dr)===Math.abs(dc));
+  if(!ok) return [];
+
+  const stepR=dr===0?0:dr/Math.abs(dr);
+  const stepC=dc===0?0:dc/Math.abs(dc);
+  const len=Math.max(Math.abs(dr),Math.abs(dc))+1;
+
+  const path=[];
+  let r=ar, c=ac;
+  for(let i=0;i<len;i++){
+    const el = cellEls[r]?.[c];
+    if(el) path.push(el);
+    r+=stepR; c+=stepC;
+  }
+  return path;
+}
+
+function selectionString(path){
+  return path.map(el=>el.textContent).join("");
+}
+
+function tryMatch(){
+  if(selectedPath.length<2) return;
+
+  const s1 = selectionString(selectedPath);
+  const s2 = s1.split("").reverse().join("");
+
+  for(const w of WORDS){
+    if(found.has(w)) continue;
+    if(s1 === w || s2 === w){
+      found.add(w);
+
+      // pintar en verde las celdas seleccionadas
+      selectedPath.forEach(el=>{
+        el.classList.remove("selected");
+        el.classList.add("found");
+      });
+
+      // completar respuesta en la fila correcta y bloquear
+      const sel = document.getElementById("sel-"+w);
+      if(sel){
+        sel.value = w;
+        sel.classList.add("locked");
+        sel.disabled = true;
+      }
+
+      countEl.textContent = found.size;
+      break;
+    }
+  }
+}
+
+// Eventos por celda
+for(let r=0;r<size;r++){
+  for(let c=0;c<size;c++){
+    const cell = cellEls[r][c];
+
     cell.addEventListener("mousedown",(e)=>{
       e.preventDefault();
       isDragging=true;
@@ -286,19 +379,19 @@
       clearSelection();
       startCell=null;
     });
-  });
+  }
+}
 
-  document.addEventListener("mouseup",()=>{
-    if(isDragging){
-      isDragging=false;
-      tryMatch();
-      clearSelection();
-      startCell=null;
-    }
-  });
+document.addEventListener("mouseup",()=>{
+  if(isDragging){
+    isDragging=false;
+    tryMatch();
+    clearSelection();
+    startCell=null;
+  }
+});
 
-  // Reiniciar (recarga)
-  resetBtn.addEventListener("click", ()=> location.reload());
+resetBtn.addEventListener("click", ()=> location.reload());
 </script>
 
 </body>
