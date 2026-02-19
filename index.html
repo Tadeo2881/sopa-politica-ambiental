@@ -10,6 +10,11 @@
   h1{color:#1b2a4a; margin:0 0 8px;}
   p{margin:6px 0 10px;}
 
+  .toolbar{display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;}
+  button{padding:8px 14px; border:1px solid #cfd6e6; background:white; border-radius:10px; cursor:pointer;}
+  button:hover{background:#eef2ff;}
+  .count{font-weight:800;}
+
   .grid{
     display:grid;
     grid-template-columns:repeat(15, 34px);
@@ -18,7 +23,6 @@
     margin:18px auto 10px;
     padding:10px;
   }
-
   .cell{
     width:34px; height:34px;
     border:1px solid #cfd6e6;
@@ -30,11 +34,6 @@
   .cell.selected{background:#ffe08a;}
   .cell.found{background:#2ecc71; color:white;}
 
-  .toolbar{display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;}
-  button{padding:8px 14px; border:1px solid #cfd6e6; background:white; border-radius:10px; cursor:pointer;}
-  button:hover{background:#eef2ff;}
-  .count{font-weight:800;}
-
   .qaWrap{
     max-width:980px;
     margin:18px auto;
@@ -44,27 +43,40 @@
     padding:14px;
     text-align:left;
   }
-
-  table{
-    width:100%;
-    border-collapse:collapse;
-    table-layout:fixed; /* fuerza 2 columnas */
-  }
-  th, td{
-    border:1px solid #e6ebf7;
-    padding:10px;
-    vertical-align:top;
-    font-size:14px;
-  }
-  th{
-    background:#f0f4ff;
-    color:#1b2a4a;
-    text-align:left;
-  }
+  table{width:100%; border-collapse:collapse; table-layout:fixed;}
+  th, td{border:1px solid #e6ebf7; padding:10px; vertical-align:top; font-size:14px;}
+  th{background:#f0f4ff; color:#1b2a4a; text-align:left;}
   td.question{width:70%;}
-  td.answer{width:30%; text-align:center; font-weight:800;}
-  .blank{color:#999;}
-  .ok{color:#1c7c39;}
+  td.answer{width:30%; text-align:center; font-weight:900; letter-spacing:.6px;}
+
+  /* Respuesta en “rayas” */
+  .slot{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:28px;
+    border-bottom:2px solid #333;
+    padding:2px 6px;
+  }
+  .slot span{display:inline-block; padding:2px 6px;}
+  .slot.ok{border-bottom-color:#1c7c39;}
+  .slot.ok span{color:#1c7c39;}
+
+  /* Opcional: al acertar, bloquear el selector */
+  select{
+    width:100%;
+    padding:7px 10px;
+    border-radius:10px;
+    border:1px solid #cfd6e6;
+    background:white;
+    font-weight:800;
+    letter-spacing:.4px;
+  }
+  .locked{
+    background:#eaf7ef !important;
+    border-color:#bfe7cd !important;
+    color:#1c7c39 !important;
+  }
 </style>
 </head>
 
@@ -73,19 +85,19 @@
   <p>Selecciona letras con <b>clic + arrastrar</b> en línea recta (horizontal/vertical/diagonal).</p>
 
   <div class="toolbar">
-    <button onclick="location.reload()">Reiniciar</button>
+    <button id="resetBtn">Reiniciar</button>
     <div class="count">Encontradas: <span id="count">0</span> / <span id="total">0</span></div>
   </div>
 
   <div class="grid" id="grid"></div>
 
   <div class="qaWrap">
-    <h2 style="margin:0 0 10px;">Preguntas y respuestas</h2>
-    <table id="qaTable">
+    <h2 style="margin:0 0 10px;">Preguntas y respuestas (desordenadas)</h2>
+    <table>
       <thead>
         <tr>
           <th>Pregunta</th>
-          <th>Respuesta</th>
+          <th>Respuesta (elige una)</th>
         </tr>
       </thead>
       <tbody id="qaBody"></tbody>
@@ -93,32 +105,45 @@
   </div>
 
 <script>
-  // ====== PREGUNTA -> RESPUESTA (la respuesta es la PALABRA a encontrar) ======
+  // ====== PREGUNTAS (FIJAS) + RESPUESTA CORRECTA (PALABRA) ======
   const QA = [
-    { q:"1. Conjunto de decisiones del Estado para resolver problemas ambientales.", a:"POLITICA" },
+    { q:"1. Conjunto de decisiones del Estado.", a:"POLITICA" },
     { q:"2. Relacionado con el entorno natural.", a:"AMBIENTAL" },
-    { q:"3. Vía donde se crean leyes ambientales.", a:"LEGISLATIVA" },
-    { q:"4. Proceso de establecer programas y metas ambientales.", a:"PLANEACION" },
-    { q:"5. Obligación de responder por daños ambientales.", a:"RESPONSABILIDAD" },
-    { q:"6. Tipo de responsabilidad basada en leyes.", a:"JURIDICA" },
-    { q:"7. Actuar correctamente aunque no sea obligatorio por ley.", a:"ETICA" },
-    { q:"8. Compromiso de la sociedad con el medio ambiente.", a:"SOCIAL" },
-    { q:"9. Instrumento económico que desincentiva contaminar.", a:"IMPUESTO" },
-    { q:"10. Castigo por incumplir normas ambientales.", a:"SANCION" }
+    { q:"3. Vía donde se crean leyes.", a:"LEGISLATIVA" },
+    { q:"4. Proceso de establecer metas.", a:"PLANEACION" },
+    { q:"5. Obligación de responder por daños.", a:"RESPONSABILIDAD" },
+    { q:"6. Responsabilidad basada en leyes.", a:"JURIDICA" },
+    { q:"7. Actuar correctamente moralmente.", a:"ETICA" },
+    { q:"8. Compromiso de la sociedad.", a:"SOCIAL" },
+    { q:"9. Instrumento económico ambiental.", a:"IMPUESTO" },
+    { q:"10. Castigo por incumplimiento.", a:"SANCION" }
   ];
 
-  // ====== CONFIG SOPA ======
+  // ====== SOPA ======
   const size = 15;
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const gridEl = document.getElementById("grid");
   const qaBody = document.getElementById("qaBody");
   const countEl = document.getElementById("count");
   const totalEl = document.getElementById("total");
+  const resetBtn = document.getElementById("resetBtn");
 
   totalEl.textContent = QA.length;
 
-  // Render tabla con 2 columnas (Pregunta | Respuesta)
-  const found = new Set();
+  // ---- util: shuffle ----
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ====== 1) Respuestas visibles pero DESORDENADAS (cambian cada inicio) ======
+  const answersShuffled = shuffle(QA.map(x=>x.a));
+
+  // Render tabla: pregunta fija + un SELECT con respuestas en orden aleatorio
   QA.forEach((item, idx) => {
     const tr = document.createElement("tr");
 
@@ -127,16 +152,32 @@
     tdQ.textContent = item.q;
 
     const tdA = document.createElement("td");
-    tdA.className = "answer blank";
-    tdA.id = "ans-" + item.a;
-    tdA.textContent = "__________";
+    tdA.className = "answer";
 
+    const sel = document.createElement("select");
+    sel.id = "sel-" + item.a;
+
+    // opción por defecto (rayas)
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = "__________";
+    sel.appendChild(opt0);
+
+    // opciones desordenadas
+    answersShuffled.forEach(w=>{
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      sel.appendChild(opt);
+    });
+
+    tdA.appendChild(sel);
     tr.appendChild(tdQ);
     tr.appendChild(tdA);
     qaBody.appendChild(tr);
   });
 
-  // Construir matriz aleatoria (simple)
+  // ====== 2) Cuadrícula (letras random) ======
   const cells = [];
   for(let r=0; r<size; r++){
     for(let c=0; c<size; c++){
@@ -150,70 +191,66 @@
     }
   }
 
-  // Selección por arrastre (8 direcciones)
-  let isDragging = false;
-  let startCell = null;
-  let selectedPath = [];
+  // ====== 3) Lógica de selección por arrastre ======
+  let isDragging=false, startCell=null, selectedPath=[];
+  const found = new Set();
 
   function getCell(r,c){
     return gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
   }
-
   function clearSelection(){
-    selectedPath.forEach(el => el.classList.remove("selected"));
-    selectedPath = [];
+    selectedPath.forEach(el=>el.classList.remove("selected"));
+    selectedPath=[];
   }
-
   function linePath(a,b){
-    const ar = +a.dataset.r, ac = +a.dataset.c;
-    const br = +b.dataset.r, bc = +b.dataset.c;
-    const dr = br - ar, dc = bc - ac;
+    const ar=+a.dataset.r, ac=+a.dataset.c;
+    const br=+b.dataset.r, bc=+b.dataset.c;
+    const dr=br-ar, dc=bc-ac;
 
-    const ok = (dr===0) || (dc===0) || (Math.abs(dr)===Math.abs(dc));
+    const ok=(dr===0)||(dc===0)||(Math.abs(dr)===Math.abs(dc));
     if(!ok) return [];
 
-    const stepR = dr===0 ? 0 : dr/Math.abs(dr);
-    const stepC = dc===0 ? 0 : dc/Math.abs(dc);
-    const len = Math.max(Math.abs(dr), Math.abs(dc)) + 1;
+    const stepR=dr===0?0:dr/Math.abs(dr);
+    const stepC=dc===0?0:dc/Math.abs(dc);
+    const len=Math.max(Math.abs(dr),Math.abs(dc))+1;
 
-    const path = [];
-    let r = ar, c = ac;
+    const path=[];
+    let r=ar, c=ac;
     for(let i=0;i<len;i++){
-      const cell = getCell(r,c);
+      const cell=getCell(r,c);
       if(cell) path.push(cell);
-      r += stepR; c += stepC;
+      r+=stepR; c+=stepC;
     }
     return path;
   }
-
   function selectionString(path){
-    return path.map(el => el.textContent).join("");
+    return path.map(el=>el.textContent).join("");
   }
 
   function tryMatch(){
-    if(selectedPath.length < 2) return;
+    if(selectedPath.length<2) return;
 
     const s1 = selectionString(selectedPath);
     const s2 = s1.split("").reverse().join("");
 
-    // ¿coincide con alguna respuesta?
     for(const item of QA){
-      const w = item.a;
-      if(!found.has(w) && (s1.includes(w) || s2.includes(w))){
+      const w=item.a;
+      if(found.has(w)) continue;
+      if(s1.includes(w) || s2.includes(w)){
         found.add(w);
 
-        // marcar celdas como encontradas
-        selectedPath.forEach(el => {
+        // marcar verde en sopa
+        selectedPath.forEach(el=>{
           el.classList.remove("selected");
           el.classList.add("found");
         });
 
-        // mostrar respuesta enfrente
-        const ans = document.getElementById("ans-" + w);
-        if(ans){
-          ans.textContent = w;
-          ans.classList.remove("blank");
-          ans.classList.add("ok");
+        // ✅ marcar respuesta correcta: seleccionar automáticamente su palabra y bloquear
+        const sel = document.getElementById("sel-"+w);
+        if(sel){
+          sel.value = w;           // pone la respuesta en su “raya”
+          sel.classList.add("locked");
+          sel.disabled = true;     // bloquea (opcional)
         }
 
         countEl.textContent = found.size;
@@ -222,44 +259,46 @@
     }
   }
 
-  // Eventos
-  cells.forEach(cell => {
-    cell.addEventListener("mousedown", (e)=>{
+  cells.forEach(cell=>{
+    cell.addEventListener("mousedown",(e)=>{
       e.preventDefault();
-      isDragging = true;
-      startCell = cell;
+      isDragging=true;
+      startCell=cell;
       clearSelection();
-      selectedPath = [cell];
-      cell.classList.add("selected");
+      selectedPath=[cell];
+      if(!cell.classList.contains("found")) cell.classList.add("selected");
     });
 
-    cell.addEventListener("mouseenter", ()=>{
-      if(!isDragging || !startCell) return;
+    cell.addEventListener("mouseenter",()=>{
+      if(!isDragging||!startCell) return;
       clearSelection();
-      const path = linePath(startCell, cell);
-      selectedPath = path;
-      selectedPath.forEach(el => {
+      const path=linePath(startCell, cell);
+      selectedPath=path;
+      selectedPath.forEach(el=>{
         if(!el.classList.contains("found")) el.classList.add("selected");
       });
     });
 
-    cell.addEventListener("mouseup", ()=>{
+    cell.addEventListener("mouseup",()=>{
       if(!isDragging) return;
-      isDragging = false;
+      isDragging=false;
       tryMatch();
       clearSelection();
-      startCell = null;
+      startCell=null;
     });
   });
 
-  document.addEventListener("mouseup", ()=>{
+  document.addEventListener("mouseup",()=>{
     if(isDragging){
-      isDragging = false;
+      isDragging=false;
       tryMatch();
       clearSelection();
-      startCell = null;
+      startCell=null;
     }
   });
+
+  // Reiniciar (recarga)
+  resetBtn.addEventListener("click", ()=> location.reload());
 </script>
 
 </body>
