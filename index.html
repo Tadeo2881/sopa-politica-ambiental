@@ -3,93 +3,134 @@
 <head>
 <meta charset="UTF-8">
 <title>Sopa de Letras – Política Ambiental</title>
+
 <style>
-body { font-family: Arial; text-align:center; background:#f4f6fb; }
+body { font-family: Arial; background:#f4f6fb; text-align:center; }
 h1 { color:#1b2a4a; }
-.grid { 
-  display:grid; 
-  grid-template-columns: repeat(15, 35px); 
-  gap:5px; 
-  justify-content:center; 
-  margin:20px auto; 
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(15, 35px);
+  gap:5px;
+  justify-content:center;
+  margin:20px auto;
 }
-.cell {
+
+.cell{
   width:35px;
   height:35px;
-  background:white;
   border:1px solid #ccc;
   display:flex;
   align-items:center;
   justify-content:center;
   font-weight:bold;
   cursor:pointer;
+  background:white;
 }
-.cell.selected { background:#ffd66a; }
-.cell.found { background:#3ddc97; color:white; }
-.word-list { max-width:600px; margin:auto; text-align:left; }
-.found-word { text-decoration: line-through; color:green; }
-button { padding:8px 15px; margin:10px; }
+
+.cell.selected{ background:#ffd66a; }
+.cell.found{ background:#3ddc97; color:white; }
+
+.question{
+  max-width:700px;
+  margin:10px auto;
+  text-align:left;
+  padding:8px;
+  border-bottom:1px solid #ddd;
+}
+
+.answered{
+  color:green;
+  font-weight:bold;
+}
+
+button{ padding:8px 15px; margin:10px; }
 </style>
 </head>
+
 <body>
 
 <h1>Sopa de Letras – Política Ambiental</h1>
-<p>Selecciona letras haciendo clic una por una.</p>
+<p>Selecciona letras con clic + arrastrar (horizontal o vertical).</p>
+
 <button onclick="location.reload()">Reiniciar</button>
+<p><strong>Encontradas: <span id="count">0</span> / 10</strong></p>
 
 <div class="grid" id="grid"></div>
 
-<div class="word-list">
-<h3>Palabras:</h3>
-<div id="words"></div>
-</div>
+<h2>Preguntas</h2>
+<div id="questions"></div>
 
 <script>
-const words = [
-"POLITICA","AMBIENTAL","LEGISLATIVA","PLANEACION",
-"RESPONSABILIDAD","JURIDICA","ETICA","SOCIAL",
-"SUSTENTABILIDAD","DESARROLLO","LEY","REGLAMENTO",
-"NORMATIVIDAD","INSTRUMENTOS","ECONOMICOS","IMPUESTO",
-"SUBSIDIO","MULTA","INCENTIVO","CONTAMINACION",
-"PREVENCION","MITIGACION","EVALUACION","IMPACTO",
-"GOBIERNO","SOCIEDAD","EMPRESA","SANCION","PLAN"
-];
 
-const size = 15;
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const grid = document.getElementById("grid");
-const wordContainer = document.getElementById("words");
-let selected = "";
+const words = {
+POLITICA:"1. Conjunto de decisiones del Estado para resolver problemas ambientales.",
+AMBIENTAL:"2. Relacionado con el entorno natural.",
+LEGISLATIVA:"3. Vía donde se crean leyes ambientales.",
+PLANEACION:"4. Proceso de establecer programas y metas ambientales.",
+RESPONSABILIDAD:"5. Obligación de responder por daños ambientales.",
+JURIDICA:"6. Tipo de responsabilidad basada en leyes.",
+ETICA:"7. Actuar correctamente aunque no sea obligatorio por ley.",
+SOCIAL:"8. Compromiso de la sociedad con el medio ambiente.",
+IMPUESTO:"9. Instrumento económico que desincentiva contaminar.",
+SANCION:"10. Castigo por incumplir normas ambientales."
+};
 
-words.forEach(w=>{
+const size=15;
+const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const grid=document.getElementById("grid");
+const questionsDiv=document.getElementById("questions");
+let selected="";
+let foundCount=0;
+
+// Mostrar preguntas
+for(let key in words){
   let div=document.createElement("div");
-  div.textContent=w;
-  div.id="word-"+w;
-  wordContainer.appendChild(div);
-});
+  div.className="question";
+  div.id="q-"+key;
+  div.textContent=words[key];
+  questionsDiv.appendChild(div);
+}
 
+// Crear cuadrícula aleatoria
 for(let i=0;i<size*size;i++){
   let cell=document.createElement("div");
   cell.className="cell";
   cell.textContent=letters[Math.floor(Math.random()*letters.length)];
-  cell.onclick=function(){
-    selected+=cell.textContent;
-    cell.classList.add("selected");
-    checkWord();
-  }
+
+  cell.onmousedown=function(){
+    selected="";
+    document.querySelectorAll(".selected").forEach(c=>c.classList.remove("selected"));
+  };
+
+  cell.onmouseover=function(e){
+    if(e.buttons==1){
+      selected+=cell.textContent;
+      cell.classList.add("selected");
+      checkWord();
+    }
+  };
+
   grid.appendChild(cell);
 }
 
 function checkWord(){
-  words.forEach(w=>{
-    if(selected.includes(w)){
-      document.getElementById("word-"+w).classList.add("found-word");
+  for(let key in words){
+    if(selected.includes(key)){
+      document.getElementById("q-"+key).classList.add("answered");
+      document.getElementById("q-"+key).innerHTML += " ✅";
+      document.querySelectorAll(".selected").forEach(c=>{
+        c.classList.remove("selected");
+        c.classList.add("found");
+      });
       selected="";
-      document.querySelectorAll(".selected").forEach(c=>c.classList.remove("selected"));
+      foundCount++;
+      document.getElementById("count").textContent=foundCount;
     }
-  });
+  }
 }
+
 </script>
 
 </body>
-</html> 
+</html>
