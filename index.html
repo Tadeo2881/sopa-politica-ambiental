@@ -1,46 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="Sopa de Letras Digital - Política Ambiental. Encuentra 30 palabras relacionadas con política ambiental en esta sopa de letras interactiva." />
-  <title>Sopa de Letras – Política Ambiental</title>
-  <link rel="stylesheet" href="styles/main.css" />
+<meta charset="UTF-8">
+<title>Sopa de Letras – Política Ambiental</title>
+<style>
+body { font-family: Arial; text-align:center; background:#f4f6fb; }
+h1 { color:#1b2a4a; }
+.grid { 
+  display:grid; 
+  grid-template-columns: repeat(15, 35px); 
+  gap:5px; 
+  justify-content:center; 
+  margin:20px auto; 
+}
+.cell {
+  width:35px;
+  height:35px;
+  background:white;
+  border:1px solid #ccc;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  cursor:pointer;
+}
+.cell.selected { background:#ffd66a; }
+.cell.found { background:#3ddc97; color:white; }
+.word-list { max-width:600px; margin:auto; text-align:left; }
+.found-word { text-decoration: line-through; color:green; }
+button { padding:8px 15px; margin:10px; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Sopa de Letras Digital – Política Ambiental</h1>
-    <p>Selecciona letras con <strong>clic + arrastrar</strong> (horizontal/vertical/diagonal). Se acepta al derecho o al revés.</p>
-  </header>
 
-  <main class="wrap">
-    <section class="card">
-      <div class="topbar">
-        <button class="btn" id="resetBtn" aria-label="Reiniciar el juego">Reiniciar</button>
-        <div class="stats" id="stats" aria-live="polite" aria-label="Palabras encontradas">
-          Encontradas: 0 / 30
-        </div>
-      </div>
+<h1>Sopa de Letras – Política Ambiental</h1>
+<p>Selecciona letras haciendo clic una por una.</p>
+<button onclick="location.reload()">Reiniciar</button>
 
-      <div class="grid" id="grid" role="grid" aria-label="Sopa de letras 20 por 20"></div>
+<div class="grid" id="grid"></div>
 
-      <div class="note">
-        💡 <strong>Tip:</strong> Si no te reconoce una palabra, intenta seleccionarla completa en línea recta (sin "doblar").
-      </div>
-    </section>
+<div class="word-list">
+<h3>Palabras:</h3>
+<div id="words"></div>
+</div>
 
-    <aside class="card">
-      <div class="list">
-        <div>
-          <div class="sectionTitle">30 preguntas / pistas (encuentra la palabra)</div>
-          <div class="hint">Cuando encuentres una palabra, se marcará en verde aquí y en la cuadrícula.</div>
-        </div>
-        <div class="words" id="words" role="region" aria-label="Lista de palabras a encontrar"></div>
-      </div>
-    </aside>
-  </main>
+<script>
+const words = [
+"POLITICA","AMBIENTAL","LEGISLATIVA","PLANEACION",
+"RESPONSABILIDAD","JURIDICA","ETICA","SOCIAL",
+"SUSTENTABILIDAD","DESARROLLO","LEY","REGLAMENTO",
+"NORMATIVIDAD","INSTRUMENTOS","ECONOMICOS","IMPUESTO",
+"SUBSIDIO","MULTA","INCENTIVO","CONTAMINACION",
+"PREVENCION","MITIGACION","EVALUACION","IMPACTO",
+"GOBIERNO","SOCIEDAD","EMPRESA","SANCION","PLAN"
+];
 
-  <script src="js/data.js"></script>
-  <script src="js/game.js"></script>
+const size = 15;
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const grid = document.getElementById("grid");
+const wordContainer = document.getElementById("words");
+let selected = "";
+
+words.forEach(w=>{
+  let div=document.createElement("div");
+  div.textContent=w;
+  div.id="word-"+w;
+  wordContainer.appendChild(div);
+});
+
+for(let i=0;i<size*size;i++){
+  let cell=document.createElement("div");
+  cell.className="cell";
+  cell.textContent=letters[Math.floor(Math.random()*letters.length)];
+  cell.onclick=function(){
+    selected+=cell.textContent;
+    cell.classList.add("selected");
+    checkWord();
+  }
+  grid.appendChild(cell);
+}
+
+function checkWord(){
+  words.forEach(w=>{
+    if(selected.includes(w)){
+      document.getElementById("word-"+w).classList.add("found-word");
+      selected="";
+      document.querySelectorAll(".selected").forEach(c=>c.classList.remove("selected"));
+    }
+  });
+}
+</script>
+
 </body>
 </html>
